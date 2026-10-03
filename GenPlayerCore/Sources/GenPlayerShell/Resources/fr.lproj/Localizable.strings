@@ -1749,3 +1749,5 @@
 "HDR.Badge.Help" = "Afficher les détails de couleur et HDR";
 "Scroll Left" = "Défiler vers la gauche";
 "Scroll Right" = "Défiler vers la droite";
+
+"GenPlayer.SourceDescription" = "Code source de l’application et instructions de compilation. Les composants tiers conservent leurs propres licences.";

@@ -1673,3 +1673,5 @@
 "HDR.Badge.Target" = "HDR · Renderziel";
 "HDR.Badge.Source" = "HDR · Quelle";
 "HDR.Badge.Help" = "Farb- und HDR-Details anzeigen";
+
+"GenPlayer.SourceDescription" = "Quellcode der App und Bauanleitung. Für Komponenten Dritter gelten deren eigene Lizenzen.";

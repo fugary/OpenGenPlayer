@@ -1749,3 +1749,5 @@
 "HDR.Badge.Help" = "查看色彩与 HDR 详情";
 "Scroll Left" = "向左滚动";
 "Scroll Right" = "向右滚动";
+
+"GenPlayer.SourceDescription" = "应用源码与构建说明。第三方组件沿用各自许可证。";

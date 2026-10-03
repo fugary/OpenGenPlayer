@@ -1749,3 +1749,5 @@
 "HDR.Badge.Help" = "Farb- und HDR-Details anzeigen";
 "Scroll Left" = "Nach links scrollen";
 "Scroll Right" = "Nach rechts scrollen";
+
+"GenPlayer.SourceDescription" = "Quellcode der App und Bauanleitung. Für Komponenten Dritter gelten deren eigene Lizenzen.";

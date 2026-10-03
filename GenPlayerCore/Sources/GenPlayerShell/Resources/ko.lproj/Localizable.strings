@@ -1749,3 +1749,5 @@
 "HDR.Badge.Help" = "색상 및 HDR 세부 정보 보기";
 "Scroll Left" = "왼쪽으로 스크롤";
 "Scroll Right" = "오른쪽으로 스크롤";
+
+"GenPlayer.SourceDescription" = "앱 소스 코드와 빌드 안내입니다. 타사 구성 요소에는 각각의 라이선스가 적용됩니다.";

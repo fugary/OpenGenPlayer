@@ -1673,3 +1673,5 @@
 "HDR.Badge.Target" = "HDR · 算繪目標";
 "HDR.Badge.Source" = "HDR · 片源";
 "HDR.Badge.Help" = "查看色彩與 HDR 詳情";
+
+"GenPlayer.SourceDescription" = "應用程式原始碼與建置說明。第三方元件沿用各自授權條款。";

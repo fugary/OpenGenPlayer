@@ -15,6 +15,12 @@ struct OpenSourceLibrary: Identifiable {
 
 let openSourceLibraries: [OpenSourceLibrary] = [
     OpenSourceLibrary(
+        name: "GenPlayer",
+        licenseType: "MIT",
+        urlString: "https://github.com/fugary/OpenGenPlayer",
+        description: "GenPlayer.SourceDescription"
+    ),
+    OpenSourceLibrary(
         name: "MPVKit / libmpv / FFmpeg",
         licenseType: "LGPL-3.0",
         urlString: "https://github.com/mpvkit/MPVKit/blob/1.0.0/LICENSE",

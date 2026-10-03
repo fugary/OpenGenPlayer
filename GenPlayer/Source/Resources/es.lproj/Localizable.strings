@@ -1673,3 +1673,5 @@
 "HDR.Badge.Target" = "HDR · Destino de renderizado";
 "HDR.Badge.Source" = "HDR · Origen";
 "HDR.Badge.Help" = "Mostrar detalles de color y HDR";
+
+"GenPlayer.SourceDescription" = "Código fuente de la aplicación e instrucciones de compilación. Los componentes de terceros conservan sus propias licencias.";

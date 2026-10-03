@@ -1673,3 +1673,5 @@
 "HDR.Badge.Target" = "HDR · 描画先";
 "HDR.Badge.Source" = "HDR · ソース";
 "HDR.Badge.Help" = "色と HDR の詳細を表示";
+
+"GenPlayer.SourceDescription" = "アプリのソースコードとビルド手順。サードパーティ製コンポーネントにはそれぞれのライセンスが適用されます。";
