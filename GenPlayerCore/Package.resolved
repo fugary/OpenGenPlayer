@@ -1,0 +1,41 @@
+{
+  "pins" : [
+    {
+      "identity" : "amsmb2",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amosavian/AMSMB2",
+      "state" : {
+        "revision" : "1726aaaf7adf63d7d1d2a0c5d1b0e635028215c0",
+        "version" : "4.0.3"
+      }
+    },
+    {
+      "identity" : "mpvkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mpvkit/MPVKit.git",
+      "state" : {
+        "revision" : "288527dffbc6d3e63cce147fc7b520c64a791603",
+        "version" : "1.0.0"
+      }
+    },
+    {
+      "identity" : "nfskit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/alexiscn/NFSKit.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "ec63d055b9ee08d609d3c6cb32f42c07edc7bdf7"
+      }
+    },
+    {
+      "identity" : "vlckit-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/fugary/vlckit-spm.git",
+      "state" : {
+        "revision" : "b9511b994eee772f115a0977ec00283e44e30a96",
+        "version" : "3.7.3"
+      }
+    }
+  ],
+  "version" : 2
+}

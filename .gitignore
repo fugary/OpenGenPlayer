@@ -1,0 +1,59 @@
+# Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+**/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Build
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# CocoaPods
+Pods/
+*.xcworkspace
+!GenPlayer.xcworkspace/contents.xcworkspacedata
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+.clang-module-cache/
+
+# macOS
+.DS_Store
+*.swp
+*~.nib
+
+# AppCode
+.idea/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Secrets
+*.p12
+*.mobileprovision
+*.pem
+
+
+# Local OAuth and signing configuration
+Config/Local.xcconfig
+*.p8
+*.key
+.env
+.env.*
+!*.example
+VLCKitPatched/Artifacts
+
+# Additional icon renditions generated during builds; source icons are tracked.
+GenPlayer/Assets.xcassets/AppIcon*.appiconset/icon_*.png

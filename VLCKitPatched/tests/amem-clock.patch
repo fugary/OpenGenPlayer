@@ -1,0 +1,78 @@
+--- a/modules/audio_output/amem.c
++++ b/modules/audio_output/amem.c
+@@ -80,12 +80,33 @@
+     float volume;
+     bool mute;
+     bool ready;
++    /* Test-only wall-clock queue. Never included in the iOS framework. */
++    bool test_clock;
++    unsigned test_rate;
++    vlc_tick_t test_end;
++    vlc_tick_t test_pause;
+ };
+ 
++static int TestTimeGet (audio_output_t *aout, vlc_tick_t *delay)
++{
++    aout_sys_t *sys = aout->sys;
++    if (sys->test_end == VLC_TICK_INVALID)
++        return -1;
++    const vlc_tick_t now = sys->test_pause ? sys->test_pause : mdate();
++    *delay = __MAX(sys->test_end - now, 0);
++    return 0;
++}
++
+ static void Play (audio_output_t *aout, block_t *block)
+ {
+     aout_sys_t *sys = aout->sys;
+ 
++    if (sys->test_clock)
++    {
++        const vlc_tick_t start = sys->test_end == VLC_TICK_INVALID
++            ? block->i_pts : __MAX(sys->test_end, mdate());
++        sys->test_end = start + block->i_nb_samples * CLOCK_FREQ / sys->test_rate;
++    }
+     sys->play (sys->opaque, block->p_buffer, block->i_nb_samples,
+                block->i_pts);
+     block_Release (block);
+@@ -94,6 +115,12 @@
+ static void Pause (audio_output_t *aout, bool paused, vlc_tick_t date)
+ {
+     aout_sys_t *sys = aout->sys;
++    if (sys->test_clock)
++    {
++        if (!paused && sys->test_pause && sys->test_end)
++            sys->test_end += date - sys->test_pause;
++        sys->test_pause = paused ? date : VLC_TICK_INVALID;
++    }
+     void (*cb) (void *, int64_t) = paused ? sys->pause : sys->resume;
+ 
+     if (cb != NULL)
+@@ -103,6 +130,8 @@
+ static void Flush (audio_output_t *aout, bool wait)
+ {
+     aout_sys_t *sys = aout->sys;
++    if (sys->test_clock && !wait)
++        sys->test_end = VLC_TICK_INVALID;
+     void (*cb) (void *) = wait ? sys->drain : sys->flush;
+ 
+     if (cb != NULL)
+@@ -232,6 +261,7 @@
+             vlc_assert_unreachable();
+     }
+ 
++    sys->test_rate = fmt->i_rate;
+     fmt->i_format = VLC_CODEC_S16N;
+     fmt->channel_type = AUDIO_CHANNEL_TYPE_BITMAP;
+     return VLC_SUCCESS;
+@@ -276,7 +306,10 @@
+     aout->sys = sys;
+     aout->start = Start;
+     aout->stop = Stop;
+-    aout->time_get = NULL;
++    sys->test_clock = getenv("GENPLAYER_VLC_TEST_CLOCK") != NULL;
++    sys->test_end = VLC_TICK_INVALID;
++    sys->test_pause = VLC_TICK_INVALID;
++    aout->time_get = sys->test_clock ? TestTimeGet : NULL;
+     aout->play = Play;
+     aout->pause = Pause;
+     aout->flush = Flush;

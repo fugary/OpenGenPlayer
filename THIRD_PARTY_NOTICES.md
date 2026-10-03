@@ -1,0 +1,30 @@
+# Third-party source and dependencies
+
+The root application license does not replace the licenses of third-party code,
+libraries, fonts, headers, or marks. Preserve individual copyright notices.
+
+| Component | Source/build reference | License reference |
+| --- | --- | --- |
+| MPVKit 1.0.0, ordinary product | https://github.com/mpvkit/MPVKit/tree/288527dffbc6d3e63cce147fc7b520c64a791603; includes its build scripts and patches | `Licenses/MPVKit-LGPL-3.0.txt`; upstream states LGPL-3.0 for its ordinary bundles |
+| mpv 0.41.0 | https://github.com/mpv-player/mpv/tree/v0.41.0; local Metal/ASS modifications and headers are in `GenPlayerCore/Sources/GenPlayerMPVBridge` | `Licenses/mpv-LGPL-2.1.txt`, upstream Copyright and per-file notices; bundle dependencies may impose later terms |
+| FFmpeg n8.1.2 | https://github.com/FFmpeg/FFmpeg/tree/n8.1.2; MPVKit's pinned build scripts contain build settings and patches | https://ffmpeg.org/legal.html; the inspected ordinary bundle enables version3, so do not label it only LGPL-2.1 |
+| VLCKit 3.7.3 and VLC 3.0.23 | Fixed revisions, local patch and source retrieval/build instructions in `VLCKitPatched/README.md` and `scripts/build_vlckit_rate_fix.py` | `VLCKitPatched/COPYING`, per-component notices and upstream distribution terms |
+| FileProvider and AEXML | Vendored source in `FileProvider` | `FileProvider/LICENSE`, `FileProvider/Sources/AEXML/LICENSE` |
+| libssh2 | Vendored source/version manifest in `GenPlayerCore/Sources/GenPlayerSSH2` | `GenPlayerCore/Sources/GenPlayerSSH2/COPYING` |
+| AMSMB2 / libsmb2 | Version and revision in `GenPlayerCore/Package.resolved`; https://github.com/amosavian/AMSMB2 | Upstream license files, including LGPL terms for libsmb2 |
+| NFSKit | Revision in `GenPlayerCore/Package.resolved`; https://github.com/alexiscn/NFSKit | Upstream license files; pin and preserve licenses of its dependencies |
+| Vulkan headers | Version/source in the MPV bridge README | `GenPlayerCore/Sources/GenPlayerMPVBridge/vendor/vulkan/LICENSE.md` and `LICENSES` |
+| Source Han Sans SC | Bundled subtitle font; https://github.com/adobe-fonts/source-han-sans | `Licenses/SourceHanSans-OFL-1.1.txt` |
+
+MPVKit also carries libraries such as libass, FreeType, HarfBuzz, FriBidi,
+libplacebo, MoltenVK, shaderc, libdovi, dav1d, uavs3d, libbluray, uchardet,
+GnuTLS, GMP/nettle/hogweed and OpenSSL. Their exact artifact references are in
+MPVKit's pinned `Package.swift`; each retains its own license. This initial
+source branch is not a complete license/source archive for every prebuilt
+artifact. A release must include an audited inventory and corresponding source
+delivery for the artifacts actually linked into that release.
+
+Source code may be compiled with a modified compatible library using the
+supplied application code and build instructions. This does not promise that
+Apple will sign, accept, or distribute a modified build. Do not publish signing
+private keys or user credentials.

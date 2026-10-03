@@ -1,0 +1,8 @@
+// Copy to Local.xcconfig (ignored). Use -xcconfig Config/Local.xcconfig.
+// Create your own native and limited-input Google OAuth registrations.
+GENPLAYER_GOOGLE_CLIENT_ID =
+GENPLAYER_GOOGLE_DEVICE_CLIENT_ID =
+GENPLAYER_GOOGLE_DEVICE_CLIENT_SECRET =
+GENPLAYER_GOOGLE_CALLBACK_SCHEME =
+GENPLAYER_ONEDRIVE_CLIENT_ID =
+DEVELOPMENT_TEAM =

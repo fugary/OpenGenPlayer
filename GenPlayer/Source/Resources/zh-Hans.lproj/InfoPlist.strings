@@ -1,0 +1,2 @@
+// Camera permission for TV authorization
+"NSCameraUsageDescription" = "使用相机扫描电视授权二维码。";

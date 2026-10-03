@@ -1,0 +1,7 @@
+// Explicit headers keep Swift/Clang dependency scanning aware of new bridge APIs
+// when an existing Xcode build cache predates the added header.
+module GenPlayerVLCBridge {
+    header "GenPlayerVLCFrameBridge.h"
+    header "GenPlayerVLCAudioReader.h"
+    export *
+}

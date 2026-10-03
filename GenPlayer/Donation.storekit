@@ -1,0 +1,75 @@
+{
+  "identifier" : "GenPlayerDonationConfiguration",
+  "nonRenewingSubscriptions" : [ ],
+  "products" : [
+    {
+      "displayPrice" : "6.00",
+      "familyShareable" : false,
+      "internalID" : "B1001",
+      "localizations" : [
+        {
+          "description" : "A warm cup of coffee to fuel development",
+          "displayName" : "Buy a Coffee",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "暖心咖啡，为日常开发注入满满动力",
+          "displayName" : "请喝一杯咖啡",
+          "locale" : "zh_CN"
+        }
+      ],
+      "productID" : "com.fugary.genplayer.tip.coffee",
+      "referenceName" : "Tip Coffee",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "6.00",
+      "familyShareable" : false,
+      "internalID" : "B1002",
+      "localizations" : [
+        {
+          "description" : "A refreshing cup of tea to fuel development",
+          "displayName" : "Buy a Tea",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "清香茶叶，为日常开发注入满满动力",
+          "displayName" : "请喝一杯茶",
+          "locale" : "zh_CN"
+        }
+      ],
+      "productID" : "com.fugary.genplayer.tip.tea",
+      "referenceName" : "Tip Tea",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "12.00",
+      "familyShareable" : false,
+      "internalID" : "B1003",
+      "localizations" : [
+        {
+          "description" : "Directly unlock all supporter perks forever",
+          "displayName" : "Lifetime Supporter",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "一步到位，永久解锁全部支持者特权",
+          "displayName" : "终身支持者",
+          "locale" : "zh_CN"
+        }
+      ],
+      "productID" : "com.fugary.genplayer.supporter.lifetime",
+      "referenceName" : "Lifetime Supporter",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_locale" : "zh_CN",
+    "_storefront" : "CHN"
+  },
+  "subscriptionGroups" : [ ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

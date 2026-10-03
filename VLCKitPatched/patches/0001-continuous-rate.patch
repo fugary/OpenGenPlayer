@@ -1,0 +1,300 @@
+--- a/src/input/clock.c
++++ b/src/input/clock.c
+@@ -135,6 +135,16 @@
+     return p;
+ }
+ 
++/* Presentation mappings for audio queued before a rate change. Video decoding
++ * can lag behind audio submission, so it must retain each old mapping until
++ * it reaches the same stream-time boundary. */
++typedef struct clock_rate_segment_t
++{
++    clock_point_t end;
++    int i_rate;
++    struct clock_rate_segment_t *next;
++} clock_rate_segment_t;
++
+ /* */
+ #define INPUT_CLOCK_LATE_COUNT (3)
+ 
+@@ -150,6 +160,8 @@
+ 
+     /* Maximal timestamp returned by input_clock_ConvertTS (in system unit) */
+     vlc_tick_t i_ts_max;
++    vlc_tick_t i_audio_end;
++    clock_rate_segment_t *rate_history;
+ 
+     /* Amount of extra buffering expressed in stream clock */
+     vlc_tick_t i_buffering_duration;
+@@ -185,6 +197,75 @@
+ 
+ static vlc_tick_t ClockGetTsOffset( input_clock_t * );
+ 
++static void ClockClearRateHistory( input_clock_t *cl )
++{
++    while( cl->rate_history )
++    {
++        clock_rate_segment_t *segment = cl->rate_history;
++        cl->rate_history = segment->next;
++        free( segment );
++    }
++}
++
++static void ClockRememberRate( input_clock_t *cl, vlc_tick_t i_system )
++{
++    const vlc_tick_t now = cl->b_paused ? cl->i_pause_date : mdate();
++    while( cl->rate_history && cl->rate_history->end.i_system < now - CR_MEAN_PTS_GAP )
++    {
++        clock_rate_segment_t *expired = cl->rate_history;
++        cl->rate_history = expired->next;
++        free( expired );
++    }
++
++    clock_rate_segment_t **tail = &cl->rate_history;
++    while( *tail )
++    {
++        /* Changes before another audio block only replace the pending rate. */
++        if( (*tail)->end.i_stream == cl->i_audio_end )
++            return;
++        if( (*tail)->end.i_stream > cl->i_audio_end )
++        {
++            ClockClearRateHistory( cl );
++            tail = &cl->rate_history;
++            break;
++        }
++        tail = &(*tail)->next;
++    }
++    clock_rate_segment_t *segment = malloc( sizeof(*segment) );
++    if( !segment )
++        return;
++    *segment = (clock_rate_segment_t) {
++        .end = clock_point_Create( cl->i_audio_end, i_system ),
++        .i_rate = cl->i_rate,
++        .next = NULL,
++    };
++    *tail = segment;
++}
++
++static void ClockShiftRateHistory( input_clock_t *cl, vlc_tick_t offset )
++{
++    for( clock_rate_segment_t *segment = cl->rate_history; segment; segment = segment->next )
++        segment->end.i_system += offset;
++}
++
++static vlc_tick_t ClockPresentationDate( input_clock_t *cl, vlc_tick_t ts, int *rate )
++{
++    for( clock_rate_segment_t *segment = cl->rate_history; segment; segment = segment->next )
++    {
++        if( ts < segment->end.i_stream )
++        {
++            if( rate )
++                *rate = segment->i_rate;
++            return segment->end.i_system +
++                ( ts - segment->end.i_stream ) * segment->i_rate / INPUT_RATE_DEFAULT;
++        }
++    }
++    if( rate )
++        *rate = cl->i_rate;
++    return ClockStreamToSystem( cl, ts + AvgGet( &cl->drift ) ) +
++        cl->i_pts_delay + ClockGetTsOffset( cl );
++}
++
+ /*****************************************************************************
+  * input_clock_New: create a new clock
+  *****************************************************************************/
+@@ -202,6 +283,8 @@
+     cl->last = clock_point_Create( VLC_TICK_INVALID, VLC_TICK_INVALID );
+ 
+     cl->i_ts_max = VLC_TICK_INVALID;
++    cl->i_audio_end = VLC_TICK_INVALID;
++    cl->rate_history = NULL;
+ 
+     cl->i_buffering_duration = 0;
+ 
+@@ -225,6 +308,7 @@
+  *****************************************************************************/
+ void input_clock_Delete( input_clock_t *cl )
+ {
++    ClockClearRateHistory( cl );
+     AvgClean( &cl->drift );
+     vlc_mutex_destroy( &cl->lock );
+     free( cl );
+@@ -261,6 +345,8 @@
+          * stream ?). */
+         msg_Warn( p_log, "clock gap, unexpected stream discontinuity" );
+         cl->i_ts_max = VLC_TICK_INVALID;
++        cl->i_audio_end = VLC_TICK_INVALID;
++        ClockClearRateHistory( cl );
+ 
+         /* */
+         msg_Warn( p_log, "feeding synchro with a new reference point trying to recover from clock gap" );
+@@ -337,6 +423,8 @@
+     cl->ref = clock_point_Create( VLC_TICK_INVALID, VLC_TICK_INVALID );
+     cl->b_has_external_clock = false;
+     cl->i_ts_max = VLC_TICK_INVALID;
++    cl->i_audio_end = VLC_TICK_INVALID;
++    ClockClearRateHistory( cl );
+ 
+     vlc_mutex_unlock( &cl->lock );
+ }
+@@ -348,11 +436,30 @@
+ {
+     vlc_mutex_lock( &cl->lock );
+ 
+-    if( cl->b_has_reference )
+-    {
+-        /* Move the reference point (as if we were playing at the new rate
+-         * from the start */
+-        cl->ref.i_system = cl->last.i_system - (cl->last.i_system - cl->ref.i_system) * i_rate / cl->i_rate;
++    if( cl->b_has_reference && cl->i_rate != i_rate )
++    {
++        const vlc_tick_t i_audio_stream = cl->i_audio_end + AvgGet( &cl->drift );
++        const vlc_tick_t i_audio_system = ClockStreamToSystem( cl, i_audio_stream )
++            + cl->i_pts_delay + ClockGetTsOffset( cl );
++        if( cl->i_audio_end > VLC_TICK_INVALID &&
++            ( cl->b_paused || i_audio_system >= mdate() ) )
++        {
++            /* Audio is already queued at the old rate. Keep its end date
++             * fixed, including the rate-scaled cache delay, and apply the
++             * new rate to subsequent samples. All tracks share this clock.
++             * A stream-time anchor also handles changes before the next PCR. */
++            ClockRememberRate( cl, i_audio_system );
++            cl->i_rate = i_rate;
++            cl->ref.i_system = i_audio_system - cl->i_pts_delay - ClockGetTsOffset( cl )
++                - ( i_audio_stream - cl->ref.i_stream ) * i_rate / INPUT_RATE_DEFAULT;
++        }
++        else
++        {
++            /* Preserve the existing behavior without active audio. */
++            ClockClearRateHistory( cl );
++            cl->ref.i_system = cl->last.i_system
++                - ( cl->last.i_system - cl->ref.i_system ) * i_rate / cl->i_rate;
++        }
+     }
+     cl->i_rate = i_rate;
+ 
+@@ -375,6 +482,7 @@
+         {
+             cl->ref.i_system += i_duration;
+             cl->last.i_system += i_duration;
++            ClockShiftRateHistory( cl, i_duration );
+         }
+     }
+     cl->i_pause_date = i_date;
+@@ -406,7 +514,7 @@
+  *****************************************************************************/
+ int input_clock_ConvertTS( vlc_object_t *p_object, input_clock_t *cl,
+                            int *pi_rate, vlc_tick_t *pi_ts0, vlc_tick_t *pi_ts1,
+-                           vlc_tick_t i_ts_bound )
++                           vlc_tick_t i_ts_bound, vlc_tick_t i_audio_duration )
+ {
+     assert( pi_ts0 );
+     vlc_mutex_lock( &cl->lock );
+@@ -429,21 +537,27 @@
+     const vlc_tick_t i_ts_buffering = cl->i_buffering_duration * cl->i_rate / INPUT_RATE_DEFAULT;
+     const vlc_tick_t i_ts_delay = cl->i_pts_delay + ClockGetTsOffset( cl );
+ 
++    const vlc_tick_t i_audio_end = *pi_ts0 > VLC_TICK_INVALID && i_audio_duration > 0
++        ? *pi_ts0 + i_audio_duration : VLC_TICK_INVALID;
++
+     /* */
+     if( *pi_ts0 > VLC_TICK_INVALID )
+     {
+-        *pi_ts0 = ClockStreamToSystem( cl, *pi_ts0 + AvgGet( &cl->drift ) );
+-        if( *pi_ts0 > cl->i_ts_max )
+-            cl->i_ts_max = *pi_ts0;
+-        *pi_ts0 += i_ts_delay;
++        *pi_ts0 = ClockPresentationDate( cl, *pi_ts0, pi_rate );
++        if( *pi_ts0 - i_ts_delay > cl->i_ts_max )
++            cl->i_ts_max = *pi_ts0 - i_ts_delay;
+     }
+ 
+     /* XXX we do not update i_ts_max on purpose */
+     if( pi_ts1 && *pi_ts1 > VLC_TICK_INVALID )
+     {
+-        *pi_ts1 = ClockStreamToSystem( cl, *pi_ts1 + AvgGet( &cl->drift ) ) +
+-                  i_ts_delay;
+-    }
++        *pi_ts1 = ClockPresentationDate( cl, *pi_ts1, NULL );
++    }
++
++    if( i_audio_end > VLC_TICK_INVALID &&
++        ( i_ts_bound == INT64_MAX ||
++          *pi_ts0 < mdate() + i_ts_delay + i_ts_buffering + i_ts_bound ) )
++        cl->i_audio_end = i_audio_end;
+ 
+     vlc_mutex_unlock( &cl->lock );
+ 
+@@ -519,6 +633,7 @@
+ 
+     cl->ref.i_system += i_offset;
+     cl->last.i_system += i_offset;
++    ClockShiftRateHistory( cl, i_offset );
+ 
+     vlc_mutex_unlock( &cl->lock );
+ }
+--- a/src/input/clock.h
++++ b/src/input/clock.h
+@@ -109,7 +109,7 @@
+  * Otherwise it will return VLC_SUCCESS.
+  */
+ int input_clock_ConvertTS( vlc_object_t *, input_clock_t *, int *pi_rate,
+-                           vlc_tick_t *pi_ts0, vlc_tick_t *pi_ts1, vlc_tick_t i_ts_bound );
++                           vlc_tick_t *pi_ts0, vlc_tick_t *pi_ts1, vlc_tick_t i_ts_bound, vlc_tick_t i_audio_duration );
+ 
+ /**
+  * This function returns the current rate.
+--- a/src/input/decoder.c
++++ b/src/input/decoder.c
+@@ -640,7 +640,7 @@
+     if( !p_owner->p_clock || i_ts <= VLC_TICK_INVALID )
+         return i_ts;
+ 
+-    if( input_clock_ConvertTS( VLC_OBJECT(p_dec), p_owner->p_clock, NULL, &i_ts, NULL, INT64_MAX ) ) {
++    if( input_clock_ConvertTS( VLC_OBJECT(p_dec), p_owner->p_clock, NULL, &i_ts, NULL, INT64_MAX, 0 ) ) {
+         msg_Err(p_dec, "Could not get display date for timestamp %"PRId64"", i_ts);
+         return VLC_TICK_INVALID;
+     }
+@@ -802,7 +802,8 @@
+             *pi_ts1 += i_es_delay;
+         if( i_ts_bound != INT64_MAX )
+             i_ts_bound += i_es_delay;
+-        if( input_clock_ConvertTS( VLC_OBJECT(p_dec), p_clock, &i_rate, pi_ts0, pi_ts1, i_ts_bound ) ) {
++        if( input_clock_ConvertTS( VLC_OBJECT(p_dec), p_clock, &i_rate, pi_ts0, pi_ts1, i_ts_bound,
++                p_dec->fmt_in.i_cat == AUDIO_ES && pi_duration ? *pi_duration : 0 ) ) {
+             const char *psz_name = module_get_name( p_dec->p_module, false );
+             if( pi_ts1 != NULL )
+                 msg_Err(p_dec, "Could not convert timestamps %"PRId64
+--- a/src/audio_output/dec.c
++++ b/src/audio_output/dec.c
+@@ -259,6 +259,12 @@
+         return; /* nothing can be done if timing is unknown */
+     drift += mdate () - dec_pts;
+ 
++    /* Output timestamps are in wall-clock units. Tempo filters still work in
++     * fixed-size output windows at high speed; shrinking the hard correction
++     * threshold below the normal-speed window can flush otherwise continuous
++     * audio during a rate transition. Keep the existing resampling thresholds. */
++    const int correction_rate = __MAX( input_rate, INPUT_RATE_DEFAULT );
++
+     /* Late audio output.
+      * This can happen due to insufficient caching, scheduling jitter
+      * or bug in the decoder. Ideally, the output would seek backward. But that
+@@ -266,7 +272,7 @@
+      * where supported. The other alternative is to flush the buffers
+      * completely. */
+     if (drift > (owner->sync.discontinuity ? 0
+-                  : +3 * input_rate * AOUT_MAX_PTS_DELAY / INPUT_RATE_DEFAULT))
++                  : +3 * correction_rate * AOUT_MAX_PTS_DELAY / INPUT_RATE_DEFAULT))
+     {
+         if (!owner->sync.discontinuity)
+             msg_Warn (aout, "playback way too late (%"PRId64"): "
+@@ -289,7 +295,7 @@
+     /* Early audio output.
+      * This is rare except at startup when the buffers are still empty. */
+     if (drift < (owner->sync.discontinuity ? 0
+-                : -3 * input_rate * AOUT_MAX_PTS_ADVANCE / INPUT_RATE_DEFAULT))
++                : -3 * correction_rate * AOUT_MAX_PTS_ADVANCE / INPUT_RATE_DEFAULT))
+     {
+         if (!owner->sync.discontinuity)
+             msg_Warn (aout, "playback way too early (%"PRId64"): "

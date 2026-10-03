@@ -1,0 +1,2 @@
+// Camera permission for TV authorization
+"NSCameraUsageDescription" = "テレビの認証用 QR コードをスキャンするためにカメラを使用します。";
